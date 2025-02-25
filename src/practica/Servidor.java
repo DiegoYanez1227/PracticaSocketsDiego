@@ -10,7 +10,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Servidor {
-
+public static void main(String[] args) {
+	new Servidor().ejecutar();
+}
 
 	public void ejecutar() {
 		PrintWriter pw= null;
@@ -20,7 +22,6 @@ public class Servidor {
 			System.out.println("conexion del servidor creada");
 			
 			Socket socket1= aceptarCliente(serverSocket);
-			String mensaje1=leerCadenas(socket1);
 			tarea(socket1);
 			Socket socket2= aceptarCliente(serverSocket);
 			tarea(socket2);
