@@ -12,110 +12,88 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Cliente extends Thread{
-	static Scanner sc= new Scanner(System.in);
-	Socket socket= new Socket();
-	
-	private int id;
+    static Scanner sc = new Scanner(System.in);
+    private Socket socket;
+    private int id;
 
-	
-	public Cliente(int id ) {
-		this.id=id;
-	}
+    public Cliente(int id) {
+        this.id = id;
+    }
 
-	public void run () {
-		menu();
-	}
+    public void run() {
+        conectarAlServidor();
+        menu();
+    }
 
-	public void menu () {
-		conectarAlServidor(socket);
-		
-		int opcion;
-		do {
-			System.out.println("Cliente "+id);
-			System.out.println("Opciones:");
-			System.out.println("0. Salir");
-			System.out.println("1. Enviar una tarea al servidor");
-			System.out.println("2. Recibir el resultado");
-			System.out.println("Introduce una opcion");
-			opcion= sc.nextInt();
-			if(opcion==1) {
-				enviarTarea();
-			}else if(opcion ==2){
-				recibirResultado();
-			}else if(opcion ==0){
-				System.out.println("El Cliente numero:"+id+" ha decido salir");
-			}else {
-				System.out.println("El Cliente numero:"+id+" no ha introducido ninguna de las opciones. \n Selecciona una opcion valida por favor");
-			}
-		}while(opcion!=0);
-	}
-	
-	public synchronized void enviarTarea() {
-		
-		try {
-			System.out.println("Introduce la tarea que le quieras dar al servidor");
-			String mensajeEnviar=sc.nextLine();
-			enviarCadenas(socket, mensajeEnviar);
-			System.out.println("Se ha enviado correctamente la peticion del Cliente");
-			join();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public synchronized void recibirResultado() {
-		try {
-			join();
-			String mensajeRecibido=leerCadenas(socket);
-			System.out.println("El cliente ha leido el resultado:"+mensajeRecibido);
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-	public void conectarAlServidor(Socket socket) {
-		
-		try {
-			System.out.println("Creando el socket Cliente "+id);
-			System.out.println("Estableciendo conexion");
-			InetSocketAddress addr = new InetSocketAddress("localhost",5000);
-			socket.connect(addr);
-			System.out.println("Se ha conectado correctamente");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	private static String leerCadenas(Socket socket) throws IOException {
-		InputStream is = socket.getInputStream();
-		InputStreamReader isr = new InputStreamReader(is);
-		BufferedReader br = new BufferedReader(isr);
-		
-		String mensajeRecibido;
-		
-		while((mensajeRecibido=br.readLine())!=null){
-			System.out.println("Se ha recibido un resultado");
-		}
-		br.close();
-		isr.close();
-		is.close();
-		
-		return mensajeRecibido;
-	}
-	
-	private static void enviarCadenas(Socket socket, String mensajeEnviar) throws IOException {
-		OutputStream os = socket.getOutputStream();
-		OutputStreamWriter osw = new OutputStreamWriter(os);
-		PrintWriter pw = new PrintWriter(osw, true);
-		
-		pw.println(mensajeEnviar);
-		
-		pw.close();
-		osw.close();
-		os.close();
-	}
+    private void menu() {
+        int opcion;
+        do {
+            System.out.println("Cliente " + id);
+            System.out.println("Opciones:");
+            System.out.println("0. Salir");
+            System.out.println("1. Enviar una tarea al servidor");
+            System.out.println("2. Recibir el resultado");
+            System.out.print("Introduce una opción: ");
+            opcion = sc.nextInt();
+            sc.nextLine();
+
+            switch (opcion) {
+                case 1:
+                    enviarTarea();
+                    break;
+                case 2:
+                    recibirResultado();
+                    break;
+                case 0:
+                    System.out.println("El Cliente número " + id + " ha decidido salir.");
+                    break;
+                default:
+                    System.out.println("Opción no válida. Inténtalo de nuevo.");
+            }
+        } while (opcion != 0);
+    }
+
+    private void enviarTarea() {
+        try {
+            System.out.print("Introduce la tarea (Ejemplo: 5 + 3): ");
+            String mensajeEnviar = sc.nextLine();
+            enviarCadenas(mensajeEnviar);
+            System.out.println("Se ha enviado correctamente la petición.");
+        } catch (IOException e) {
+            System.err.println("Error al enviar la tarea: " + e.getMessage());
+        }
+    }
+
+    private void recibirResultado() {
+        try {
+            String mensajeRecibido = leerCadenas();
+            System.out.println("Resultado recibido: " + mensajeRecibido);
+        } catch (IOException e) {
+            System.err.println("Error al recibir el resultado: " + e.getMessage());
+        }
+    }
+
+    private void conectarAlServidor() {
+        try {
+            System.out.println("Creando socket para Cliente " + id + "...");
+            socket = new Socket();
+            socket.connect(new InetSocketAddress("localhost", 5000));
+            System.out.println("Conexión establecida con el servidor.");
+        } catch (IOException e) {
+            System.err.println("No se pudo conectar al servidor: " + e.getMessage());
+        }
+    }
+
+    private void enviarCadenas(String mensaje) throws IOException {
+        OutputStream os = socket.getOutputStream();
+        PrintWriter pw = new PrintWriter(os, true);
+        pw.println(mensaje);
+    }
+
+    private String leerCadenas() throws IOException {
+        InputStream is = socket.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        return br.readLine(); 
+    }
 	
 }
