@@ -1,18 +1,13 @@
 package practica;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class Cliente extends Thread{
-    static Scanner sc = new Scanner(System.in);
+public class Cliente extends Thread {
+    private static final Scanner sc = new Scanner(System.in);
+    private static final Object lock = new Object(); // Objeto de bloqueo compartido
     private Socket socket;
     private int id;
 
@@ -20,67 +15,51 @@ public class Cliente extends Thread{
         this.id = id;
     }
 
-    public void run() {
+    public synchronized void run() {
         conectarAlServidor();
-        menu();
-    }
-
-    private void menu() {
-        int opcion;
-        do {
-            System.out.println("Cliente " + id);
-            System.out.println("Opciones:");
-            System.out.println("0. Salir");
-            System.out.println("1. Enviar una tarea al servidor");
-            System.out.println("2. Recibir el resultado");
-            System.out.print("Introduce una opción: ");
-            opcion = sc.nextInt();
-            sc.nextLine();
-
-            switch (opcion) {
-                case 1:
-                    enviarTarea();
-                    break;
-                case 2:
-                    recibirResultado();
-                    break;
-                case 0:
-                    System.out.println("El Cliente número " + id + " ha decidido salir.");
-                    break;
-                default:
-                    System.out.println("Opción no válida. Inténtalo de nuevo.");
+     
+            try {
+                enviarTarea();
+                recibirResultado();
+                lock.notifyAll(); 
+            } catch (Exception e) {
+                System.err.println("Error en cliente " + id + ": " + e.getMessage());
             }
-        } while (opcion != 0);
+        
     }
 
-    private void enviarTarea() {
+    private synchronized void enviarTarea() {
         try {
-            System.out.print("Introduce la tarea (Ejemplo: 5 + 3): ");
+            System.out.print("Cliente " + id + " - Introduce la tarea (Ejemplo: 5 + 3): ");
             String mensajeEnviar = sc.nextLine();
-            enviarCadenas(mensajeEnviar);
-            System.out.println("Se ha enviado correctamente la petición.");
-        } catch (IOException e) {
-            System.err.println("Error al enviar la tarea: " + e.getMessage());
+           
+                enviarCadenas(mensajeEnviar);
+                System.out.println("Cliente " + id + " - Petición enviada correctamente.");
+                lock.wait(); 
+            
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Error al enviar la tarea en Cliente " + id + ": " + e.getMessage());
         }
     }
 
-    private void recibirResultado() {
+    private synchronized void recibirResultado() {
         try {
-            String mensajeRecibido = leerCadenas();
-            System.out.println("Resultado recibido: " + mensajeRecibido);
+                String mensajeRecibido = leerCadenas();
+                System.out.println("Cliente " + id + " - Resultado recibido: " + mensajeRecibido);
+                lock.notifyAll(); 
         } catch (IOException e) {
-            System.err.println("Error al recibir el resultado: " + e.getMessage());
+            System.err.println("Error al recibir el resultado en Cliente " + id + ": " + e.getMessage());
         }
     }
 
     private void conectarAlServidor() {
         try {
-            System.out.println("Creando socket para Cliente " + id + "...");
+            System.out.println("Cliente " + id + " - Creando socket...");
             socket = new Socket();
             socket.connect(new InetSocketAddress("localhost", 5000));
-            System.out.println("Conexión establecida con el servidor.");
+            System.out.println("Cliente " + id + " - Conectado al servidor.");
         } catch (IOException e) {
-            System.err.println("No se pudo conectar al servidor: " + e.getMessage());
+            System.err.println("Cliente " + id + " - No se pudo conectar al servidor: " + e.getMessage());
         }
     }
 
@@ -93,7 +72,6 @@ public class Cliente extends Thread{
     private String leerCadenas() throws IOException {
         InputStream is = socket.getInputStream();
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        return br.readLine(); 
+        return br.readLine();
     }
-	
 }
